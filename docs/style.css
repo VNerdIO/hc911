@@ -1,0 +1,212 @@
+/* ---------- Palette (see dataviz skill reference/palette.md) ---------- */
+.viz-root {
+  color-scheme: light;
+  --surface-1:      #fcfcfb;
+  --page-plane:     #f9f9f7;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --gridline:       #e1e0d9;
+  --baseline:       #c3c2b7;
+  --border-hairline: rgba(11,11,11,0.10);
+
+  --series-1: #2a78d6; /* blue   */
+  --series-2: #eb6834; /* orange */
+  --series-3: #1baf7a; /* aqua   */
+  --series-4: #eda100; /* yellow */
+  --series-5: #e87ba4; /* magenta */
+  --series-6: #008300; /* green  */
+  --series-7: #4a3aa7; /* violet */
+  --series-8: #e34948; /* red    */
+  --other-gray: #898781;
+
+  --seq-100: #cde2fb;
+  --seq-300: #6da7ec;
+  --seq-450: #2a78d6;
+  --seq-600: #184f95;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border-hairline: rgba(255,255,255,0.10);
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --other-gray: #898781;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --surface-1:      #1a1a19;
+  --page-plane:     #0d0d0d;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #898781;
+  --gridline:       #2c2c2a;
+  --baseline:       #383835;
+  --border-hairline: rgba(255,255,255,0.10);
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --other-gray: #898781;
+}
+
+/* ---------- Base layout ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: proportional-nums;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 0.75rem;
+}
+.app-header h1 { margin: 0; font-size: 1.5rem; }
+.app-header .subtitle { margin: 0.15rem 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+.app-header-meta { color: var(--text-muted); font-size: 0.85rem; text-align: right; }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem clamp(1rem, 4vw, 2.5rem) 1rem;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.preset-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.preset-btn, #apply-custom {
+  border: 1px solid var(--border-hairline);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.preset-btn:hover, #apply-custom:hover { background: var(--gridline); }
+.preset-btn[aria-pressed="true"] {
+  border-color: var(--series-1);
+  color: var(--series-1);
+  font-weight: 600;
+}
+.custom-range { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); }
+.custom-range input[type="date"] {
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+main { padding: 1rem clamp(1rem, 4vw, 2.5rem) 2rem; }
+
+/* ---------- Stat tiles ---------- */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.stat-tile {
+  background: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+}
+.stat-tile .stat-label { color: var(--text-secondary); font-size: 0.8rem; }
+.stat-tile .stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-top: 0.15rem;
+  font-variant-numeric: proportional-nums;
+}
+.stat-tile .stat-sub { color: var(--text-muted); font-size: 0.75rem; margin-top: 0.1rem; }
+
+/* ---------- Chart cards ---------- */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.chart-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 0;
+}
+.chart-card figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+.chart-card h2 { font-size: 0.95rem; font-weight: 600; margin: 0; color: var(--text-primary); }
+.table-toggle {
+  border: none;
+  background: none;
+  color: var(--series-1);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  text-decoration: underline;
+}
+
+.table-view { margin-top: 0.5rem; overflow-x: auto; }
+.table-view table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.table-view th, .table-view td {
+  text-align: left;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--gridline);
+  font-variant-numeric: tabular-nums;
+}
+.table-view th { color: var(--text-secondary); font-weight: 600; }
+
+.map-card { margin-bottom: 1rem; }
+.map-card figcaption { align-items: center; }
+#map { height: 480px; border-radius: 8px; }
+.map-legend { display: flex; gap: 0.9rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); }
+.map-legend .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+.map-legend .legend-swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.app-footer {
+  padding: 1rem clamp(1rem, 4vw, 2.5rem) 2rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.app-footer a { color: var(--series-1); }
+
+@media (max-width: 640px) {
+  .app-header { flex-direction: column; }
+  .app-header-meta { text-align: left; }
+}

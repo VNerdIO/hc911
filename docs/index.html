@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HC911 Incident Analytics — Hamilton County, TN</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="viz-root">
+
+<header class="app-header">
+  <div class="app-header-title">
+    <h1>HC911 Incident Analytics</h1>
+    <p class="subtitle">Hamilton County, TN — 911 dispatch activity</p>
+  </div>
+  <div class="app-header-meta" id="meta-info">
+    <span id="meta-updated">Loading data&hellip;</span>
+  </div>
+</header>
+
+<section class="filter-row" aria-label="Date range filter">
+  <div class="preset-group" role="group" aria-label="Date range presets">
+    <button type="button" class="preset-btn" data-preset="24h">Last 24h</button>
+    <button type="button" class="preset-btn" data-preset="7d">Last 7 days</button>
+    <button type="button" class="preset-btn" data-preset="30d">Last 30 days</button>
+    <button type="button" class="preset-btn" data-preset="all">All time</button>
+  </div>
+  <div class="custom-range">
+    <label for="range-start">From</label>
+    <input type="date" id="range-start">
+    <label for="range-end">To</label>
+    <input type="date" id="range-end">
+    <button type="button" id="apply-custom">Apply</button>
+  </div>
+</section>
+
+<main>
+  <section class="stat-tiles" id="stat-tiles" aria-label="Summary statistics">
+    <!-- populated by app.js -->
+  </section>
+
+  <section class="chart-grid">
+    <figure class="chart-card" id="card-hour">
+      <figcaption>
+        <h2>Incidents by hour of day</h2>
+        <button type="button" class="table-toggle" data-target="hour">View as table</button>
+      </figcaption>
+      <canvas id="chart-hour" height="220"></canvas>
+      <div class="table-view" id="table-hour" hidden></div>
+    </figure>
+
+    <figure class="chart-card" id="card-day">
+      <figcaption>
+        <h2>Incidents per day</h2>
+        <button type="button" class="table-toggle" data-target="day">View as table</button>
+      </figcaption>
+      <canvas id="chart-day" height="220"></canvas>
+      <div class="table-view" id="table-day" hidden></div>
+    </figure>
+  </section>
+
+  <section class="chart-grid breakdown-grid">
+    <figure class="chart-card" id="card-jx">
+      <figcaption>
+        <h2>Top jurisdictions</h2>
+        <button type="button" class="table-toggle" data-target="jx">View as table</button>
+      </figcaption>
+      <canvas id="chart-jx"></canvas>
+      <div class="table-view" id="table-jx" hidden></div>
+    </figure>
+
+    <figure class="chart-card" id="card-ci">
+      <figcaption>
+        <h2>Top cities</h2>
+        <button type="button" class="table-toggle" data-target="ci">View as table</button>
+      </figcaption>
+      <canvas id="chart-ci"></canvas>
+      <div class="table-view" id="table-ci" hidden></div>
+    </figure>
+
+    <figure class="chart-card" id="card-ty">
+      <figcaption>
+        <h2>Top incident types</h2>
+        <button type="button" class="table-toggle" data-target="ty">View as table</button>
+      </figcaption>
+      <canvas id="chart-ty"></canvas>
+      <div class="table-view" id="table-ty" hidden></div>
+    </figure>
+
+    <figure class="chart-card" id="card-ag">
+      <figcaption>
+        <h2>By agency type</h2>
+        <button type="button" class="table-toggle" data-target="ag">View as table</button>
+      </figcaption>
+      <canvas id="chart-ag"></canvas>
+      <div class="table-view" id="table-ag" hidden></div>
+    </figure>
+  </section>
+
+  <section class="chart-card map-card" aria-label="Incident locations">
+    <figcaption>
+      <h2>Incident locations</h2>
+      <div class="map-legend" id="map-legend"></div>
+    </figcaption>
+    <div id="map"></div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p>Data collected hourly from the public HC911 active-incidents feed. Source on
+    <a href="https://github.com/mikeosmith/hc911" target="_blank" rel="noopener">GitHub</a>.</p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
