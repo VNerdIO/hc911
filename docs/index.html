@@ -19,7 +19,7 @@
   </div>
 </header>
 
-<section class="filter-row" aria-label="Date range filter">
+<section class="filter-row" aria-label="Filters">
   <div class="preset-group" role="group" aria-label="Date range presets">
     <button type="button" class="preset-btn" data-preset="24h">Last 24h</button>
     <button type="button" class="preset-btn" data-preset="7d">Last 7 days</button>
@@ -33,6 +33,19 @@
     <input type="date" id="range-end">
     <button type="button" id="apply-custom">Apply</button>
   </div>
+  <div class="select-group">
+    <label for="filter-ci">City</label>
+    <select id="filter-ci"><option value="">All cities</option></select>
+  </div>
+  <div class="select-group">
+    <label for="filter-ag">Agency type</label>
+    <select id="filter-ag"><option value="">All agency types</option></select>
+  </div>
+  <div class="select-group">
+    <label for="filter-ty">Incident type</label>
+    <select id="filter-ty"><option value="">All incident types</option></select>
+  </div>
+  <button type="button" id="clear-filters">Clear filters</button>
 </section>
 
 <main>

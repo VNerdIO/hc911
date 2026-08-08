@@ -127,6 +127,26 @@ body {
   color: var(--text-primary);
 }
 
+.select-group { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); }
+.select-group select {
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  max-width: 220px;
+}
+#clear-filters {
+  border: none;
+  background: none;
+  color: var(--series-1);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  text-decoration: underline;
+}
+
 main { padding: 1rem clamp(1rem, 4vw, 2.5rem) 2rem; }
 
 /* ---------- Stat tiles ---------- */

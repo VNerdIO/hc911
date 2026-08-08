@@ -20,6 +20,7 @@
   let ROWS = []; // {t,lat,lon,ty,jx,ag,ci,zn,pr}
   let META = null;
   let currentRange = null; // [startMs, endMsExclusive]
+  let currentFilters = { ci: "", ag: "", ty: "" };
   let charts = {};
   let map = null;
   let mapLayer = null;
@@ -101,15 +102,49 @@
 
   function applyRange(range) {
     currentRange = range;
-    const filtered = ROWS.filter((r) => r.t >= range[0] && r.t < range[1]);
-    renderStatTiles(filtered, range);
+    render();
+  }
+
+  function filteredRows() {
+    const [start, end] = currentRange;
+    return ROWS.filter((r) => {
+      if (r.t < start || r.t >= end) return false;
+      if (currentFilters.ci && r.ci !== currentFilters.ci) return false;
+      if (currentFilters.ag && r.ag !== currentFilters.ag) return false;
+      if (currentFilters.ty && r.ty !== currentFilters.ty) return false;
+      return true;
+    });
+  }
+
+  function render() {
+    const filtered = filteredRows();
+    renderStatTiles(filtered, currentRange);
     renderHourChart(filtered);
-    renderDayChart(filtered, range);
+    renderDayChart(filtered, currentRange);
     renderBreakdown("jx", filtered, "Jurisdiction");
     renderBreakdown("ci", filtered, "City");
     renderBreakdown("ty", filtered, "Incident type");
     renderBreakdown("ag", filtered, "Agency type");
     renderMap(filtered);
+  }
+
+  // ---------------- Category filters ----------------
+
+  function uniqueSorted(rows, field) {
+    return [...new Set(rows.map((r) => r[field]).filter((v) => v))].sort((a, b) => a.localeCompare(b));
+  }
+
+  function populateFilterOptions() {
+    const fieldToSelect = { ci: "filter-ci", ag: "filter-ag", ty: "filter-ty" };
+    for (const [field, selectId] of Object.entries(fieldToSelect)) {
+      const select = document.getElementById(selectId);
+      for (const value of uniqueSorted(ROWS, field)) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+      }
+    }
   }
 
   // ---------------- Aggregation ----------------
@@ -444,6 +479,25 @@
       setActivePreset(null);
       applyRange(rangeForCustom(start, end));
     });
+    document.getElementById("filter-ci").addEventListener("change", (e) => {
+      currentFilters.ci = e.target.value;
+      render();
+    });
+    document.getElementById("filter-ag").addEventListener("change", (e) => {
+      currentFilters.ag = e.target.value;
+      render();
+    });
+    document.getElementById("filter-ty").addEventListener("change", (e) => {
+      currentFilters.ty = e.target.value;
+      render();
+    });
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      currentFilters = { ci: "", ag: "", ty: "" };
+      document.getElementById("filter-ci").value = "";
+      document.getElementById("filter-ag").value = "";
+      document.getElementById("filter-ty").value = "";
+      render();
+    });
     document.querySelectorAll(".table-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const target = document.getElementById(`table-${btn.dataset.target}`);
@@ -469,6 +523,7 @@
       return;
     }
     renderMeta();
+    populateFilterOptions();
     setActivePreset("7d");
     applyRange(rangeForPreset("7d"));
   }
