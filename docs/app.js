@@ -17,6 +17,12 @@
     return dateFmt.format(new Date(ms)); // YYYY-MM-DD
   }
 
+  const weekdayFmt = new Intl.DateTimeFormat("en-US", { timeZone: EASTERN_TZ, weekday: "short" });
+  const DAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function easternWeekdayIndex(ms) {
+    return DAY_ORDER.indexOf(weekdayFmt.format(new Date(ms)));
+  }
+
   let ROWS = []; // {t,lat,lon,ty,jx,ag,ci,zn,pr}
   let META = null;
   let currentRange = null; // [startMs, endMsExclusive]
@@ -121,6 +127,7 @@
     renderStatTiles(filtered, currentRange);
     renderHourChart(filtered);
     renderDayChart(filtered, currentRange);
+    renderHeatmap(filtered);
     renderBreakdown("jx", filtered, "Jurisdiction");
     renderBreakdown("ci", filtered, "City");
     renderBreakdown("ty", filtered, "Incident type");
@@ -162,6 +169,14 @@
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
   }
 
+  function dayHourMatrix(rows) {
+    const counts = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    for (const r of rows) counts[easternWeekdayIndex(r.t)][easternHour(r.t)]++;
+    let max = 0;
+    for (const row of counts) for (const c of row) if (c > max) max = c;
+    return { counts, max };
+  }
+
   // ---------------- Stat tiles ----------------
 
   function renderStatTiles(rows, range) {
@@ -176,6 +191,16 @@
     const typeCounts = countBy(rows, (r) => r.ty);
     const topType = topN(typeCounts, 1)[0];
 
+    const { counts: dayHourCounts } = dayHourMatrix(rows);
+    let busiestDayHour = null;
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        const c = dayHourCounts[d][h];
+        if (!busiestDayHour || c > busiestDayHour.count) busiestDayHour = { d, h, count: c };
+      }
+    }
+    if (busiestDayHour && busiestDayHour.count === 0) busiestDayHour = null;
+
     const days = Math.max(1, (range[1] - range[0]) / 86400000);
     const avgPerDay = total / days;
 
@@ -183,6 +208,7 @@
       { label: "Total incidents", value: total.toLocaleString(), sub: "in selected range" },
       { label: "Avg. incidents / day", value: avgPerDay.toFixed(1), sub: "" },
       { label: "Busiest hour", value: busiestHour ? formatHourLabel(busiestHour[0]) : "–", sub: busiestHour ? `${busiestHour[1]} incidents` : "" },
+      { label: "Busiest day/hour", value: busiestDayHour ? `${DAY_ORDER[busiestDayHour.d]} ${formatHourLabel(busiestDayHour.h)}` : "–", sub: busiestDayHour ? `${busiestDayHour.count} incidents` : "" },
       { label: "Busiest zone", value: busiestZone ? busiestZone[0] : "–", sub: busiestZone ? `${busiestZone[1]} incidents` : "" },
       { label: "Most common type", value: topType ? topType[0] : "–", sub: topType ? `${topType[1]} incidents` : "" },
     ];
@@ -224,6 +250,27 @@
   }
   function surfaceColor() {
     return getComputedStyle(document.body).getPropertyValue("--surface-1").trim();
+  }
+  function seqColor(step) {
+    return getComputedStyle(document.body).getPropertyValue(`--seq-${step}`).trim();
+  }
+
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+  }
+
+  function heatColor(t) {
+    const stops = [seqColor(100), seqColor(300), seqColor(450), seqColor(600)].map(hexToRgb);
+    const segments = stops.length - 1;
+    const scaled = Math.min(1, Math.max(0, t)) * segments;
+    const idx = Math.min(segments - 1, Math.floor(scaled));
+    const localT = scaled - idx;
+    const a = stops[idx], b = stops[idx + 1];
+    const r = Math.round(a.r + (b.r - a.r) * localT);
+    const g = Math.round(a.g + (b.g - a.g) * localT);
+    const bl = Math.round(a.b + (b.b - a.b) * localT);
+    return `rgb(${r}, ${g}, ${bl})`;
   }
 
   function destroyChart(key) {
@@ -310,6 +357,51 @@
         },
       },
     });
+  }
+
+  const DAY_LABELS_FULL = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday" };
+
+  function renderHeatmap(rows) {
+    const { counts, max } = dayHourMatrix(rows);
+
+    const tableRows = [];
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        tableRows.push([`${DAY_LABELS_FULL[DAY_ORDER[d]]} ${formatHourLabel(h)}`, counts[d][h]]);
+      }
+    }
+    renderTable("table-heatmap", ["Day / hour", "Incidents"], tableRows);
+
+    const grid = document.getElementById("heatmap-grid");
+    grid.innerHTML = "";
+
+    const corner = document.createElement("div");
+    corner.className = "heatmap-corner";
+    grid.appendChild(corner);
+
+    for (let h = 0; h < 24; h++) {
+      const label = document.createElement("div");
+      label.className = "heatmap-hour-label";
+      label.textContent = h % 3 === 0 ? formatHourLabel(h) : "";
+      grid.appendChild(label);
+    }
+
+    const gridline = baseGridColor();
+    for (let d = 0; d < 7; d++) {
+      const dayLabel = document.createElement("div");
+      dayLabel.className = "heatmap-day-label";
+      dayLabel.textContent = DAY_ORDER[d];
+      grid.appendChild(dayLabel);
+
+      for (let h = 0; h < 24; h++) {
+        const count = counts[d][h];
+        const cell = document.createElement("div");
+        cell.className = "heatmap-cell";
+        cell.style.background = count === 0 ? gridline : heatColor(count / max);
+        cell.title = `${DAY_LABELS_FULL[DAY_ORDER[d]]} ${formatHourLabel(h)}: ${count} incident${count === 1 ? "" : "s"}`;
+        grid.appendChild(cell);
+      }
+    }
   }
 
   const BREAKDOWN_KEYS = { jx: "jx", ci: "ci", ty: "ty", ag: "ag" };
