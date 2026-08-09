@@ -30,6 +30,9 @@
   let charts = {};
   let map = null;
   let mapLayer = null;
+  let heatLayer = null;
+  let mapMode = "points";
+  let lastFilteredRows = [];
 
   async function loadData() {
     const [metaRes, dataRes] = await Promise.all([
@@ -124,6 +127,7 @@
 
   function render() {
     const filtered = filteredRows();
+    lastFilteredRows = filtered;
     renderStatTiles(filtered, currentRange);
     renderHourChart(filtered);
     renderDayChart(filtered, currentRange);
@@ -501,19 +505,32 @@
     });
   }
 
-  function renderMap(rows) {
-    if (!map) {
-      map = L.map("map", { scrollWheelZoom: false });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-        maxZoom: 18,
-      }).addTo(map);
-      map.setView([35.045, -85.25], 10);
-    }
-    if (mapLayer) {
-      map.removeLayer(mapLayer);
-    }
+  function renderMapLegendHeat() {
+    const el = document.getElementById("map-legend");
+    el.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.className = "heatmap-legend";
+    const fewer = document.createElement("span");
+    fewer.textContent = "Fewer";
+    const bar = document.createElement("span");
+    bar.className = "heatmap-legend-bar";
+    const more = document.createElement("span");
+    more.textContent = "More";
+    wrap.append(fewer, bar, more);
+    el.appendChild(wrap);
+  }
 
+  function ensureMap() {
+    if (map) return;
+    map = L.map("map", { scrollWheelZoom: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 18,
+    }).addTo(map);
+    map.setView([35.045, -85.25], 10);
+  }
+
+  function renderMapPoints(rows) {
     renderMapLegend(rows);
 
     // Cluster by rounded coordinate.
@@ -547,6 +564,41 @@
     }
     mapLayer = layerGroup;
     layerGroup.addTo(map);
+  }
+
+  function renderMapHeat(rows) {
+    renderMapLegendHeat();
+
+    const points = rows
+      .filter((r) => typeof r.lat === "number" && typeof r.lon === "number")
+      .map((r) => [r.lat, r.lon, 1]);
+
+    heatLayer = L.heatLayer(points, {
+      radius: 22,
+      blur: 18,
+      maxZoom: 16,
+      max: 3,
+      gradient: { 0.2: seqColor(100), 0.4: seqColor(300), 0.7: seqColor(450), 1.0: seqColor(600) },
+    });
+    heatLayer.addTo(map);
+  }
+
+  function renderMap(rows) {
+    ensureMap();
+    if (mapLayer) {
+      map.removeLayer(mapLayer);
+      mapLayer = null;
+    }
+    if (heatLayer) {
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+    }
+
+    if (mapMode === "heat") {
+      renderMapHeat(rows);
+    } else {
+      renderMapPoints(rows);
+    }
   }
 
   function escapeHtml(s) {
@@ -589,6 +641,16 @@
       document.getElementById("filter-ag").value = "";
       document.getElementById("filter-ty").value = "";
       render();
+    });
+    document.querySelectorAll(".map-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.mapMode === mapMode) return;
+        mapMode = btn.dataset.mapMode;
+        document.querySelectorAll(".map-mode-btn").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
+        renderMap(lastFilteredRows);
+      });
     });
     document.querySelectorAll(".table-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
