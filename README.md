@@ -41,6 +41,7 @@ GitHub Pages            serves docs/ as the static SPA at hc911.nooga.me
 ## Running locally
 
 ```
+export HC911_FRONTEND_AUTH=...             # required frontend auth token
 python scripts/collect.py      # fetch + append any new incidents
 python scripts/build_data.py   # rebuild docs/data/*.json from the archive
 cd docs && python -m http.server 8000   # then open http://localhost:8000
@@ -49,6 +50,9 @@ cd docs && python -m http.server 8000   # then open http://localhost:8000
 `collect.py` requires Python 3.9+ with the `zoneinfo` module able to resolve
 `America/New_York`. Most Linux environments have this via system `tzdata`; on
 Windows (and some minimal containers) you may need `pip install tzdata`.
+`collect.py` also requires the `HC911_FRONTEND_AUTH` environment variable to
+be set to the API's frontend auth token — it exits immediately if unset,
+with no hardcoded fallback token.
 
 ## Other files
 

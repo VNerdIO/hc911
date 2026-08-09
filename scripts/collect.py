@@ -21,9 +21,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 API_URL = "https://hc911server.com/api/calls"
+FRONTEND_AUTH_TOKEN = os.environ.get("HC911_FRONTEND_AUTH")
+if not FRONTEND_AUTH_TOKEN:
+    raise SystemExit(
+        "HC911_FRONTEND_AUTH environment variable is not set. "
+        "Set it to the frontend auth token before running the collector."
+    )
 API_HEADERS = {
     "Content-Type": "application/json",
-    "X-Frontend-Auth": "my-secure-token",
+    "X-Frontend-Auth": FRONTEND_AUTH_TOKEN,
     "Origin": "https://www.hamiltontn911.gov",
 }
 TIMEOUT_SEC = 20
