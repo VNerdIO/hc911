@@ -31,9 +31,10 @@ param(
 )
 
 $ApiUrl = 'https://hc911server.com/api/calls'
+$FrontendAuth = if ($env:HC911_FRONTEND_AUTH) { $env:HC911_FRONTEND_AUTH } else { 'my-secure-token' }
 $ApiHeaders = @{
     'Content-Type'    = 'application/json'
-    'X-Frontend-Auth' = 'my-secure-token'
+    'X-Frontend-Auth' = $FrontendAuth
     'Origin'          = 'https://www.hamiltontn911.gov'
 }
 

@@ -50,6 +50,13 @@ cd docs && python -m http.server 8000   # then open http://localhost:8000
 `America/New_York`. Most Linux environments have this via system `tzdata`; on
 Windows (and some minimal containers) you may need `pip install tzdata`.
 
+Both `collect.py` and `tools/Get-HC911ActiveIncidents.ps1` send an
+`X-Frontend-Auth` header to the upstream API. It's the same static value the
+public hamiltontn911.gov site's own frontend sends, so it's not a real
+per-user secret — but it's overridable via the `HC911_FRONTEND_AUTH`
+environment variable rather than being hardcoded, in case upstream ever
+rotates it.
+
 ## Other files
 
 - `tools/Get-HC911ActiveIncidents.ps1` — a standalone PowerShell script for

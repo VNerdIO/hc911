@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 API_URL = "https://hc911server.com/api/calls"
 API_HEADERS = {
     "Content-Type": "application/json",
-    "X-Frontend-Auth": "my-secure-token",
+    "X-Frontend-Auth": os.environ.get("HC911_FRONTEND_AUTH", "my-secure-token"),
     "Origin": "https://www.hamiltontn911.gov",
 }
 TIMEOUT_SEC = 20
