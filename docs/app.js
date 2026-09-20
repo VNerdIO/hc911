@@ -23,7 +23,7 @@
     return DAY_ORDER.indexOf(weekdayFmt.format(new Date(ms)));
   }
 
-  let ROWS = []; // {t,lat,lon,ty,jx,ag,ci,zn,pr}
+  let ROWS = []; // {t,lat,lon,ty,jx,ag,ci,zn,pr,lt}
   let META = null;
   let currentRange = null; // [startMs, endMsExclusive]
   let currentFilters = { ci: "", ag: "", ty: "" };
@@ -130,12 +130,15 @@
     lastFilteredRows = filtered;
     renderStatTiles(filtered, currentRange);
     renderHourChart(filtered);
+    renderLatencyChart(filtered);
     renderDayChart(filtered, currentRange);
+    renderDayPriorityChart(filtered, currentRange);
     renderHeatmap(filtered);
     renderBreakdown("jx", filtered, "Jurisdiction");
     renderBreakdown("ci", filtered, "City");
     renderBreakdown("ty", filtered, "Incident type");
     renderBreakdown("ag", filtered, "Agency type");
+    renderPriorityChart(filtered);
     renderMap(filtered);
   }
 
@@ -173,6 +176,31 @@
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
   }
 
+  function median(arr) {
+    if (!arr.length) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  }
+
+  function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "–";
+    const s = Math.round(seconds);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    if (m < 60) return remS ? `${m}m ${remS}s` : `${m}m`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM ? `${h}h ${remM}m` : `${h}h`;
+  }
+
+  const PRIORITY_ORDER = ["PRI 0", "PRI 1", "PRI 2", "PRI 3", "PRI 4"];
+  const PRIORITY_LABELS = [...PRIORITY_ORDER, "Unknown"];
+  function priorityKey(r) {
+    return r.pr || "Unknown";
+  }
+
   function dayHourMatrix(rows) {
     const counts = Array.from({ length: 7 }, () => new Array(24).fill(0));
     for (const r of rows) counts[easternWeekdayIndex(r.t)][easternHour(r.t)]++;
@@ -208,6 +236,9 @@
     const days = Math.max(1, (range[1] - range[0]) / 86400000);
     const avgPerDay = total / days;
 
+    const latencies = rows.map((r) => r.lt).filter((v) => typeof v === "number");
+    const medianLatency = median(latencies);
+
     const tiles = [
       { label: "Total incidents", value: total.toLocaleString(), sub: "in selected range" },
       { label: "Avg. incidents / day", value: avgPerDay.toFixed(1), sub: "" },
@@ -215,6 +246,7 @@
       { label: "Busiest day/hour", value: busiestDayHour ? `${DAY_ORDER[busiestDayHour.d]} ${formatHourLabel(busiestDayHour.h)}` : "–", sub: busiestDayHour ? `${busiestDayHour.count} incidents` : "" },
       { label: "Busiest zone", value: busiestZone ? busiestZone[0] : "–", sub: busiestZone ? `${busiestZone[1]} incidents` : "" },
       { label: "Most common type", value: topType ? topType[0] : "–", sub: topType ? `${topType[1]} incidents` : "" },
+      { label: "Median dispatch time", value: formatDuration(medianLatency), sub: "creation → queued" },
     ];
 
     for (const t of tiles) {
@@ -284,6 +316,12 @@
     }
   }
 
+  function priorityColor(label) {
+    const idx = PRIORITY_ORDER.indexOf(label);
+    if (idx === -1) return getComputedStyle(document.body).getPropertyValue("--other-gray").trim();
+    return seriesColor(idx + 1);
+  }
+
   function commonScaleOptions() {
     return {
       grid: { color: baseGridColor(), drawTicks: false },
@@ -323,8 +361,48 @@
     });
   }
 
-  function renderDayChart(rows, range) {
-    const counts = countBy(rows, (r) => easternDateKey(r.t));
+  function renderLatencyChart(rows) {
+    const byHour = Array.from({ length: 24 }, () => []);
+    for (const r of rows) {
+      if (typeof r.lt === "number") byHour[easternHour(r.t)].push(r.lt);
+    }
+    const medians = byHour.map((arr) => median(arr));
+    const labels = medians.map((_, h) => formatHourLabel(h));
+
+    renderTable("table-latency", ["Hour", "Median dispatch time"], labels.map((l, h) => [l, formatDuration(medians[h])]));
+
+    destroyChart("latency");
+    const ctx = document.getElementById("chart-latency").getContext("2d");
+    charts.latency = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          data: medians,
+          backgroundColor: seriesColor(3),
+          borderRadius: 4,
+          maxBarThickness: 20,
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (item) => `Median: ${formatDuration(item.raw)}` } },
+        },
+        scales: {
+          x: commonScaleOptions(),
+          y: {
+            ...commonScaleOptions(),
+            beginAtZero: true,
+            ticks: { ...commonScaleOptions().ticks, callback: (v) => formatDuration(v) },
+          },
+        },
+      },
+    });
+  }
+
+  function enumerateEasternDays(range) {
     const days = [];
     const dayMs = 86400000;
     for (let t = range[0]; t < range[1]; t += dayMs) {
@@ -332,6 +410,12 @@
     }
     const uniqueDays = [...new Set(days)];
     const labels = uniqueDays.map((d) => displayDateFmt.format(new Date(d + "T12:00:00Z")));
+    return { uniqueDays, labels };
+  }
+
+  function renderDayChart(rows, range) {
+    const counts = countBy(rows, (r) => easternDateKey(r.t));
+    const { uniqueDays, labels } = enumerateEasternDays(range);
     const values = uniqueDays.map((d) => counts.get(d) || 0);
 
     renderTable("table-day", ["Date", "Incidents"], uniqueDays.map((d, i) => [labels[i], values[i]]));
@@ -358,6 +442,49 @@
         scales: {
           x: commonScaleOptions(),
           y: { ...commonScaleOptions(), beginAtZero: true, ticks: { ...commonScaleOptions().ticks, precision: 0 } },
+        },
+      },
+    });
+  }
+
+  function renderDayPriorityChart(rows, range) {
+    const { uniqueDays, labels } = enumerateEasternDays(range);
+    const dayIndex = new Map(uniqueDays.map((d, i) => [d, i]));
+    const series = new Map(PRIORITY_LABELS.map((l) => [l, new Array(uniqueDays.length).fill(0)]));
+
+    for (const r of rows) {
+      const idx = dayIndex.get(easternDateKey(r.t));
+      if (idx === undefined) continue;
+      series.get(priorityKey(r))[idx]++;
+    }
+
+    renderTable(
+      "table-day-pr",
+      ["Date", ...PRIORITY_LABELS],
+      uniqueDays.map((d, i) => [labels[i], ...PRIORITY_LABELS.map((l) => series.get(l)[i])])
+    );
+
+    destroyChart("dayPr");
+    const ctx = document.getElementById("chart-day-pr").getContext("2d");
+    charts.dayPr = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: PRIORITY_LABELS.map((l) => ({
+          label: l,
+          data: series.get(l),
+          backgroundColor: priorityColor(l),
+          maxBarThickness: 28,
+        })),
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: "top", labels: { color: textMutedColor(), boxWidth: 12, font: { size: 11 } } },
+        },
+        scales: {
+          x: { ...commonScaleOptions(), stacked: true },
+          y: { ...commonScaleOptions(), stacked: true, beginAtZero: true, ticks: { ...commonScaleOptions().ticks, precision: 0 } },
         },
       },
     });
@@ -442,6 +569,37 @@
     });
   }
 
+  function renderPriorityChart(rows) {
+    const counts = countBy(rows, priorityKey);
+    const values = PRIORITY_LABELS.map((l) => counts.get(l) || 0);
+
+    renderTable("table-pr", ["Priority", "Incidents"], PRIORITY_LABELS.map((l, i) => [l, values[i]]));
+
+    destroyChart("pr");
+    const ctx = document.getElementById("chart-pr").getContext("2d");
+    charts.pr = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: PRIORITY_LABELS,
+        datasets: [{
+          data: values,
+          backgroundColor: PRIORITY_LABELS.map((l) => priorityColor(l)),
+          borderRadius: 4,
+          maxBarThickness: 36,
+        }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ...commonScaleOptions(), beginAtZero: true, ticks: { ...commonScaleOptions().ticks, precision: 0 } },
+          y: commonScaleOptions(),
+        },
+      },
+    });
+  }
+
   function renderTable(containerId, headers, rows) {
     const el = document.getElementById(containerId);
     const table = document.createElement("table");
@@ -454,13 +612,13 @@
     });
     thead.appendChild(headRow);
     const tbody = document.createElement("tbody");
-    rows.forEach(([a, b]) => {
+    rows.forEach((cells) => {
       const tr = document.createElement("tr");
-      const td1 = document.createElement("td");
-      td1.textContent = a;
-      const td2 = document.createElement("td");
-      td2.textContent = String(b);
-      tr.append(td1, td2);
+      cells.forEach((cell) => {
+        const td = document.createElement("td");
+        td.textContent = String(cell);
+        tr.appendChild(td);
+      });
       tbody.appendChild(tr);
     });
     table.append(thead, tbody);

@@ -23,9 +23,9 @@ RAW_DIR = REPO_ROOT / "data" / "raw"
 OUT_DIR = REPO_ROOT / "docs" / "data"
 
 # Columnar field order for docs/data/incidents.json rows.
-FIELDS = ["t", "lat", "lon", "ty", "jx", "ag", "ci", "zn", "pr"]
+FIELDS = ["t", "lat", "lon", "ty", "jx", "ag", "ci", "zn", "pr", "lt"]
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def atomic_write_json(path, obj):
@@ -60,6 +60,13 @@ def to_row(record):
     lat = round(lat, 5) if isinstance(lat, (int, float)) else None
     lon = round(lon, 5) if isinstance(lon, (int, float)) else None
 
+    latency_s = None
+    entered_queue_utc = record.get("entered_queue_utc")
+    if entered_queue_utc:
+        diff = (datetime.fromisoformat(entered_queue_utc) - creation_utc).total_seconds()
+        if diff >= 0:
+            latency_s = round(diff)
+
     return [
         epoch_ms,
         lat,
@@ -70,6 +77,7 @@ def to_row(record):
         record.get("city"),
         record.get("zone"),
         record.get("priority"),
+        latency_s,
     ]
 
 

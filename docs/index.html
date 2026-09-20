@@ -71,6 +71,24 @@
       <canvas id="chart-day" height="220"></canvas>
       <div class="table-view" id="table-day" hidden></div>
     </figure>
+
+    <figure class="chart-card" id="card-latency">
+      <figcaption>
+        <h2>Median dispatch time by hour</h2>
+        <button type="button" class="table-toggle" data-target="latency">View as table</button>
+      </figcaption>
+      <canvas id="chart-latency" height="220"></canvas>
+      <div class="table-view" id="table-latency" hidden></div>
+    </figure>
+  </section>
+
+  <section class="chart-card" id="card-day-pr">
+    <figcaption>
+      <h2>Daily incidents by priority</h2>
+      <button type="button" class="table-toggle" data-target="day-pr">View as table</button>
+    </figcaption>
+    <canvas id="chart-day-pr" height="260"></canvas>
+    <div class="table-view" id="table-day-pr" hidden></div>
   </section>
 
   <section class="chart-card heatmap-card" id="card-heatmap">
@@ -124,6 +142,15 @@
       </figcaption>
       <canvas id="chart-ag"></canvas>
       <div class="table-view" id="table-ag" hidden></div>
+    </figure>
+
+    <figure class="chart-card" id="card-pr">
+      <figcaption>
+        <h2>By priority</h2>
+        <button type="button" class="table-toggle" data-target="pr">View as table</button>
+      </figcaption>
+      <canvas id="chart-pr"></canvas>
+      <div class="table-view" id="table-pr" hidden></div>
     </figure>
   </section>
 
